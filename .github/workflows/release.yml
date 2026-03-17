@@ -8,7 +8,7 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: release
+    # environment: release - uncomment once the environment is set up in the repository settings
     permissions:
       id-token: write
 
