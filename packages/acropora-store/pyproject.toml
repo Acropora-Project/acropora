@@ -21,6 +21,8 @@ dependencies = [
     "duckdb>=0.10",
     "pyarrow>=16.0",
     "pynacl>=1.5",
+    "mypy>=1.10",
+    "pytest-cov>=5.0",
 ]
 
 [project.urls]
@@ -37,3 +39,26 @@ dev = [
     "pytest-asyncio>=0.23",
     "mypy>=1.10",
 ]
+
+[tool.coverage.run]
+source = ["src/acropora_store"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 60
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "tools"]
+addopts = "--tb=short -q --import-mode=importlib --cov=src --cov-report=term-missing --cov-report=html"
