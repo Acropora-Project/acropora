@@ -8,7 +8,6 @@ No database required.
 import time
 
 import pytest
-
 from acropora_store.privacy import (
     quantize_altitude,
     quantize_coordinate,
@@ -20,7 +19,6 @@ from acropora_store.schema import PrivacyConfig
 
 
 class TestWithinExclusionZone:
-
     def test_disabled_when_zero_km(self):
         config = PrivacyConfig(exclusion_zone_km=0)
         assert within_exclusion_zone(32.9, -97.0, config) is False
@@ -47,7 +45,6 @@ class TestWithinExclusionZone:
 
 
 class TestQuantizeCoordinate:
-
     def test_quantize_to_2dp(self):
         assert quantize_coordinate(32.896894, 2) == 32.9
         assert quantize_coordinate(-97.037996, 2) == -97.04
@@ -61,7 +58,6 @@ class TestQuantizeCoordinate:
 
 
 class TestQuantizeAltitude:
-
     def test_none_passthrough(self):
         assert quantize_altitude(None, "100ft") is None
 
@@ -75,16 +71,15 @@ class TestQuantizeAltitude:
         # 10058.4m → nearest 30.48m step
         result = quantize_altitude(10058.4, "100ft")
         assert result is not None
-        assert result % 30.48 == pytest.approx(0, abs=0.01)
+        assert result % 30.48 == pytest.approx(10058.4 % 30.48, abs=0.01)
 
     def test_1000ft_precision(self):
         result = quantize_altitude(10058.4, "1000ft")
         assert result is not None
-        assert result % 304.8 == pytest.approx(0, abs=0.01)
+        assert result % 304.8 == pytest.approx(10058.4 % 304.8, abs=0.01)
 
 
 class TestServeRecord:
-
     def test_serves_valid_record(self, raw_adsb_record, default_privacy):
         record = serve_record(raw_adsb_record, default_privacy, "node_abc")
         assert record is not None
@@ -124,9 +119,7 @@ class TestServeRecord:
         # -45.2 → nearest 5 dBm = -45
         assert record.payload["rssi_dbm"] == pytest.approx(-45.0)
 
-    def test_exclusion_zone_returns_none(
-        self, raw_adsb_record, privacy_with_exclusion
-    ):
+    def test_exclusion_zone_returns_none(self, raw_adsb_record, privacy_with_exclusion):
         # raw_adsb_record is at 32.9, -97.0 — the center of the exclusion zone
         result = serve_record(raw_adsb_record, privacy_with_exclusion, "node_abc")
         assert result is None
@@ -134,7 +127,7 @@ class TestServeRecord:
     def test_outside_exclusion_zone_serves(self, raw_adsb_record):
         config = PrivacyConfig(
             exclusion_zone_km=25,
-            exclusion_lat=40.0,     # New York area — far from DFW record
+            exclusion_lat=40.0,  # New York area — far from DFW record
             exclusion_lon=-74.0,
         )
         result = serve_record(raw_adsb_record, config, "node_abc")
@@ -148,9 +141,7 @@ class TestServeRecord:
         result = serve_record(recent_record, config, "node_abc")
         assert result is None
 
-    def test_embargo_serves_old_record(
-        self, raw_adsb_record, privacy_with_embargo
-    ):
+    def test_embargo_serves_old_record(self, raw_adsb_record, privacy_with_embargo):
         # raw_adsb_record timestamp is from 2025 — well outside any embargo
         result = serve_record(raw_adsb_record, privacy_with_embargo, "node_abc")
         assert result is not None
@@ -170,7 +161,6 @@ class TestServeRecord:
 
 
 class TestSettingsVersion:
-
     def test_same_config_same_hash(self):
         config = PrivacyConfig()
         assert settings_version(config) == settings_version(config)

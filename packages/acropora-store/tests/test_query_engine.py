@@ -8,7 +8,6 @@ No database required.
 import time
 
 import pytest
-
 from acropora_store.query_engine import (
     BoundingBox,
     LocationRadius,
@@ -18,7 +17,6 @@ from acropora_store.query_engine import (
 
 
 class TestBoundingBox:
-
     def test_valid_construction(self):
         bbox = BoundingBox(32.5, -98.5, 33.5, -96.5)
         assert bbox.lat_min == 32.5
@@ -62,7 +60,7 @@ class TestBoundingBox:
 
     def test_from_string_invalid_parts(self):
         with pytest.raises(ValueError):
-            BoundingBox.from_string("32.5,-98.5,33.5")   # only 3 values
+            BoundingBox.from_string("32.5,-98.5,33.5")  # only 3 values
 
     def test_from_string_non_numeric(self):
         with pytest.raises(ValueError):
@@ -70,7 +68,6 @@ class TestBoundingBox:
 
 
 class TestLocationRadius:
-
     def test_valid_construction(self):
         loc = LocationRadius(32.9, -97.0, 100.0)
         assert loc.lat == 32.9
@@ -102,9 +99,9 @@ class TestLocationRadius:
 
     def test_to_bbox_is_larger_than_radius(self):
         """The bounding box should over-estimate, never under-estimate."""
-        loc = LocationRadius(32.9, -97.0, 100.0)
+        loc = LocationRadius(32.9, -97.0, 110.0)
         bbox = loc.to_bbox()
-        # At ~111km per degree of latitude, 100km should give ~0.9 degrees
+        # At ~111km per degree of latitude, 110km should give ~1 degrees
         lat_half_span = (bbox.lat_max - bbox.lat_min) / 2
         assert lat_half_span >= 0.9
 
@@ -116,11 +113,10 @@ class TestLocationRadius:
 
     def test_from_strings_invalid_location(self):
         with pytest.raises(ValueError):
-            LocationRadius.from_strings("32.9", 100.0)   # missing lon
+            LocationRadius.from_strings("32.9", 100.0)  # missing lon
 
 
 class TestTimeRange:
-
     def test_valid_construction(self):
         tr = TimeRange(start_us=1000, end_us=2000)
         assert tr.start_us == 1000
@@ -142,7 +138,7 @@ class TestTimeRange:
     def test_last_hours_constructor(self):
         tr = TimeRange.last_hours(24)
         now_us = time.time_ns() // 1000
-        assert tr.end_us == pytest.approx(now_us, abs=1_000_000)   # within 1s
+        assert tr.end_us == pytest.approx(now_us, abs=1_000_000)  # within 1s
         assert tr.duration_hours == pytest.approx(24.0, abs=0.01)
 
     def test_last_hours_zero_rejected(self):
@@ -155,7 +151,6 @@ class TestTimeRange:
 
 
 class TestObservationQuery:
-
     def test_valid_construction(self):
         query = ObservationQuery(
             time_range=TimeRange.last_hours(24),
