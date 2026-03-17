@@ -1,0 +1,162 @@
+name: acropora
+
+services:
+
+  readsb:
+    profiles: [bundled]
+    image: ghcr.io/sdr-enthusiasts/docker-readsb-protobuf:latest
+    restart: unless-stopped
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      READSB_DEVICE_TYPE: rtlsdr
+      READSB_RTLSDR_DEVICE: ${RTL_DEVICE_INDEX:-0}
+      READSB_GAIN: ${RTL_GAIN:-40}
+      READSB_LAT: ${RECEIVER_LAT}
+      READSB_LON: ${RECEIVER_LON}
+    volumes:
+      - readsb-data:/run/readsb
+    networks:
+      - acropora-internal
+    healthcheck:
+      test: ["CMD", "test", "-f", "/run/readsb/aircraft.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  postgres:
+    image: timescale/timescaledb-ha:pg16-latest
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-acropora_node}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-acropora}
+    volumes:
+      - postgres-data:/home/postgres/pgdata/data
+      - ./config/postgres/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./config/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    networks:
+      - acropora-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acropora_node} -d ${POSTGRES_DB:-acropora}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  acropora-ingest:
+    image: ghcr.io/acropora-project/acropora-ingest:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acropora_node}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-acropora}
+      READSB_AIRCRAFT_JSON: ${READSB_AIRCRAFT_JSON:-/run/readsb/aircraft.json}
+      INGEST_POLL_INTERVAL: "1.0"
+      CORAL_KEY_PATH: /etc/acropora/node.key
+      RECEIVER_LAT: ${RECEIVER_LAT}
+      RECEIVER_LON: ${RECEIVER_LON}
+    volumes:
+      - ${READSB_VOLUME_MOUNT:-readsb-data}:/run/readsb:ro
+      - acropora-keys:/etc/acropora
+      - acropora-logs:/var/lib/acropora/logs
+    networks:
+      - acropora-internal
+
+  acropora-node:
+    image: ghcr.io/acropora-project/acropora-node:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acropora_node}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-acropora}
+      CORAL_KEY_PATH: /etc/acropora/node.key
+      CORAL_NODE_NAME: ${CORAL_NODE_NAME:-"Acropora Node"}
+      CORAL_PUBLIC_HOSTNAME: ${CORAL_PUBLIC_HOSTNAME:-}
+      PRIVACY_PRESET: ${PRIVACY_PRESET:-private_contributor}
+      EXCLUSION_ZONE_KM: ${EXCLUSION_ZONE_KM:-25}
+      EXCLUSION_LAT: ${RECEIVER_LAT}
+      EXCLUSION_LON: ${RECEIVER_LON}
+      COORDINATE_DP: ${COORDINATE_DP:-2}
+      RSSI_MODE: ${RSSI_MODE:-strip}
+      EMBARGO_MINUTES: ${EMBARGO_MINUTES:-0}
+      MAX_QUERY_TIME_RANGE_HOURS: ${MAX_QUERY_TIME_RANGE_HOURS:-24}
+      MAX_QUERY_BBOX_DEGREES: ${MAX_QUERY_BBOX_DEGREES:-5.0}
+      MAX_QUERY_RADIUS_KM: ${MAX_QUERY_RADIUS_KM:-500}
+      MAX_RECORDS_PER_QUERY: ${MAX_RECORDS_PER_QUERY:-10000}
+      RATE_LIMIT_RPM: ${RATE_LIMIT_RPM:-60}
+      ACCESS_MODE: ${ACCESS_MODE:-public}
+      HOT_RETENTION_DAYS: ${HOT_RETENTION_DAYS:-90}
+      COMPRESS_AFTER_DAYS: ${COMPRESS_AFTER_DAYS:-7}
+      ARCHIVE_ENABLED: ${ARCHIVE_ENABLED:-true}
+      ARCHIVE_AFTER_DAYS: ${ARCHIVE_AFTER_DAYS:-85}
+      ARCHIVE_PATH: /var/lib/acropora/archive
+      DISCOVERABLE: ${DISCOVERABLE:-true}
+      CORAL_REGISTRIES: ${CORAL_REGISTRIES:-}
+    volumes:
+      - acropora-keys:/etc/acropora:ro
+      - acropora-archive:/var/lib/acropora/archive
+      - acropora-logs:/var/lib/acropora/logs
+    ports:
+      - "${CORAL_API_PORT:-5000}:5000"
+    networks:
+      - acropora-internal
+      - acropora-external
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  acropora-archival:
+    image: ghcr.io/acropora-project/acropora-store:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acropora_node}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-acropora}
+      ARCHIVE_ENABLED: ${ARCHIVE_ENABLED:-true}
+      ARCHIVE_AFTER_DAYS: ${ARCHIVE_AFTER_DAYS:-85}
+      ARCHIVE_PATH: /var/lib/acropora/archive
+      ARCHIVE_COMPRESSION: ${ARCHIVE_COMPRESSION:-zstd}
+    volumes:
+      - acropora-archive:/var/lib/acropora/archive
+      - acropora-logs:/var/lib/acropora/logs
+    networks:
+      - acropora-internal
+    command: ["python", "-m", "acropora_store.archival", "--schedule"]
+
+  acropora-dashboard:
+    image: ghcr.io/acropora-project/acropora-dashboard:latest
+    restart: unless-stopped
+    depends_on:
+      acropora-node:
+        condition: service_healthy
+    environment:
+      CORAL_NODE_URL: http://acropora-node:5000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-acropora_node}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-acropora}
+    volumes:
+      - acropora-logs:/var/lib/acropora/logs:ro
+    ports:
+      - "127.0.0.1:${CORAL_DASHBOARD_PORT:-5001}:5001"
+    networks:
+      - acropora-internal
+
+volumes:
+  postgres-data:
+  readsb-data:
+  acropora-keys:
+  acropora-archive:
+  acropora-logs:
+
+networks:
+  acropora-internal:
+    internal: true
+    driver: bridge
+  acropora-external:
+    driver: bridge

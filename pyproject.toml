@@ -1,0 +1,44 @@
+[tool.uv.workspace]
+members = [
+    "packages/acropora-client",
+    "packages/acropora-store",
+    "packages/acropora-ingest",
+    "packages/acropora-node",
+    "packages/acropora-registry",
+    "tools/acropora-query",
+    "tools/acropora-dashboard",
+]
+
+[tool.uv.sources]
+acropora-store     = { workspace = true }
+acropora-ingest    = { workspace = true }
+acropora-node      = { workspace = true }
+acropora-client    = { workspace = true }
+acropora-registry  = { workspace = true }
+acropora-query     = { workspace = true }
+acropora-dashboard = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "ruff>=0.4",
+    "pre-commit>=3.7",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["packages", "tools"]
+addopts = "--tb=short -q"

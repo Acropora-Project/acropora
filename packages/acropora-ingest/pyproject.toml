@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "acropora-ingest"
+version = "0.1.0"
+description = "Acropora ingest pipeline — ADS-B and sensor data adapters"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "Acropora Project Contributors" }]
+keywords = ["acropora", "adsb", "readsb", "ingest", "spatiotemporal"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "asyncpg>=0.29",
+    "pynacl>=1.5",
+    "acropora-store>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://acropora.network"
+Repository = "https://github.com/acropora-project/acropora"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/acropora_ingest"]
+
+[tool.uv.sources]
+acropora-store = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+]
