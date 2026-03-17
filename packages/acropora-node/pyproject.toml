@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "acropora-node"
+version = "0.1.0"
+description = "Acropora node — run a node and join the CORAL network"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "Acropora Project Contributors" }]
+keywords = ["acropora", "coral-network", "reef-protocol", "node", "federated"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "acropora-store>=0.1.0",
+    "acropora-ingest>=0.1.0",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.30",
+    "pynacl>=1.5",
+]
+
+[project.urls]
+Homepage = "https://acropora.network"
+Repository = "https://github.com/acropora-project/acropora"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/acropora_node"]
+
+[tool.uv.sources]
+acropora-store  = { workspace = true }
+acropora-ingest = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "httpx>=0.27",      # For FastAPI test client
+]

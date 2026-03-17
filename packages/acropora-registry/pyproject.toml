@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "acropora-registry"
+version = "0.1.0"
+description = "Acropora registry — run a federated node discovery registry"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "Acropora Project Contributors" }]
+keywords = ["acropora", "coral-network", "reef-protocol", "registry", "discovery"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "acropora-node>=0.1.0",
+    "shapely>=2.0",
+]
+
+[project.urls]
+Homepage = "https://acropora.network"
+Repository = "https://github.com/acropora-project/acropora"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/acropora_registry"]
+
+[tool.uv.sources]
+acropora-node = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+]
